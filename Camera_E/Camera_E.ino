@@ -633,27 +633,11 @@ void initCapture() {
     cli();
     _delay_ms(10000);
     digitalWrite(13, HIGH);
-    captureImg(320, 240);  
+    captureImg(320, 240);
     while (!(UCSR0A & (1 << UDRE0)));
     digitalWrite(13, LOW);  
     _delay_ms(7000);
   }
-//  StringPgm(PSTR("*CPC*"));
-}
-
-void blinkz() {
-  digitalWrite(13, HIGH);
-  _delay_ms(500);  
-  digitalWrite(13, LOW);
-  _delay_ms(500);  
-  digitalWrite(13, HIGH);
-  _delay_ms(500);  
-  digitalWrite(13, LOW);
-  _delay_ms(500);  
-  digitalWrite(13, HIGH);
-  _delay_ms(500);  
-  digitalWrite(13, LOW);
-  _delay_ms(500);  
 }
 
 void turn() {
@@ -690,7 +674,6 @@ void loop() {
   char x = UDR0;
   switch(x) {
     case '1': initCapture(); break;
-    case '2': blinkz(); break;
     case '3': turn(); break;
     case 'E': sweep();break;
   }
