@@ -10,8 +10,8 @@ import javax.comm.SerialPort;
 public class SimpleRead {
     private static final char[]START = {'*', 'S', 'T', 'A', 'R', 'T', '*'};
     private static final  char[]COMMAND = {'*', 'R', 'D', 'Y', '*'};
-    private static final int WIDTH = 320; //640;
-    private static final int HEIGHT = 240; //480;
+    private static final int WIDTH = 320;
+    private static final int HEIGHT = 240;
 
     private static CommPortIdentifier portCam, portRx, portTx;
     private InputStream inputStreamCam, inputStreamRx, inputStreamTx;
@@ -29,7 +29,6 @@ public class SimpleRead {
                 System.out.println("Port name: " + portCam.getName());
                 if (portCam.getName().equals("COM2")) {
                     break;
-//                    SimpleRead reader = new SimpleRead();
                 }
             }
         }
@@ -39,7 +38,6 @@ public class SimpleRead {
             if (portRx.getPortType() == CommPortIdentifier.PORT_SERIAL) {
                 System.out.println("Port name: " + portRx.getName());
                 if (portRx.getName().equals("COM8")) {
-//                    SimpleRead reader = new SimpleRead();
                     break;
                 }
             }
@@ -208,6 +206,8 @@ public class SimpleRead {
             System.out.println("Saved image: " + (counter-1));
             System.out.println();
             countPic++;
+
+            outputStreamCam.write('P');
         }
 
         outputStreamCam.write('E');
