@@ -18,6 +18,11 @@ public class SimpleRead {
     private OutputStream outputStreamCam, outputStreamTx, outputStreamRx;
     private SerialPort serialPortCam, serialPortRx, serialPortTx;
 
+    int nowTurning = 0;
+    int[][][]rgb = new int[3][HEIGHT][WIDTH];
+    int[][][]rgb2 = new int[3][WIDTH][HEIGHT];
+
+
     public static void main(String[] args) {
         Enumeration portList = CommPortIdentifier.getPortIdentifiers();
         Enumeration portListRx = CommPortIdentifier.getPortIdentifiers();
@@ -90,36 +95,41 @@ public class SimpleRead {
             while(!isBoardReady(inputStreamCam, 0)){};
 
             System.out.println("CAM READY!");
-            char[] valSend = new char[3];
+            byte[] valSend = new byte[3];
 
             while (true) {
                 char inp = (char)read(inputStreamRx);
                 while(!(inp == '#')){
-                    System.out.println(inp);
+                    System.out.println("FAIL: " + inp);
                     inp = (char)read(inputStreamRx);
                 };
                 int cmm = read(inputStreamRx);
+                System.out.println("COMM: " + cmm);
                 if (cmm == 'T') {
                     int r = read(inputStreamRx);
                     if (r == '1') {
                         outputStreamCam.write(51);
                         outputStreamCam.write(49);
+                        nowTurning = 0;
                     }
                     else if (r == '2') {
                         outputStreamCam.write(51);
                         outputStreamCam.write(50);
+                        nowTurning = 1;
                     }
                     else if (r == '3') {
                         outputStreamCam.write(51);
                         outputStreamCam.write(51);
+                        nowTurning = 2;
                     }
                 }
                 else if (cmm == 'I') {
                     sweepCapture(counter, valSend);
                 }
                 else if (cmm == 'R') {
+                    System.out.println("FIND");
                     int r = read(inputStreamRx);
-                    char selectedValue = 0;
+                    byte selectedValue = 0;
                     if (r == '1')
                         selectedValue = valSend[0];
                     else if (r == '2')
@@ -129,26 +139,51 @@ public class SimpleRead {
 
                     sweepCapture(counter, valSend);
 
-                    int min = 999, minAng = 3;
+                    System.out.println("SELECTED: " + selectedValue);
+
+                    int min = 999, minAng = 0;
                     for (int i = 0; i < 3; i ++ ) {
                         int tempz = Math.abs(selectedValue - valSend[i]);
+                        System.out.println("TEMPZ: " + i + " " + tempz);
                         if (tempz < min) {
                             min = tempz;
                             minAng = i;
+                            System.out.println("NEWMINANG: " + i);
                         }
                     }
 
                     switch (minAng) {
                         case 0: outputStreamCam.write(51);
                                 outputStreamCam.write(49);
+                                nowTurning = 0;
                                 break;
 
                         case 1: outputStreamCam.write(51);
-                                outputStreamCam.write(49);
+                                outputStreamCam.write(50);
+                                nowTurning = 1;
                                 break;
+
                         case 2: outputStreamCam.write(51);
-                                outputStreamCam.write(49);
+                                outputStreamCam.write(51);
+                                nowTurning = 2;
                                 break;
+                    }
+                }
+                else if (cmm == 'G') {
+                    byte r = (byte) read(inputStreamRx);
+                    System.out.println("GET: " + (int)r);
+                    for (byte i = 0; i < r; i ++) {
+                        TimeUnit.SECONDS.sleep(20);
+                        outputStreamTx.write(',');
+                        int x = (int) (Math.random() * (256));
+                        int y = (int) (Math.random() * (239));
+
+                        System.out.println("G" + i + ": " + x + " " + y);
+                        System.out.println("VAL: " + (rgb2[nowTurning][x][y]& 0xFF));
+
+                        outputStreamTx.write(rgb2[nowTurning][x][y] & 0xFF);
+                        outputStreamTx.write(x);
+                        outputStreamTx.write(y);
                     }
                 }
             }
@@ -157,10 +192,9 @@ public class SimpleRead {
         }
     }
 
-    private void sweepCapture (int counter, char[] valSend) throws IOException, InterruptedException{
+    private void sweepCapture (int counter, byte[] valSend) throws IOException, InterruptedException{
         int countPic = 0;
-        int[][]rgb = new int[HEIGHT][WIDTH];
-        int[][]rgb2 = new int[WIDTH][HEIGHT];
+
 
         outputStreamCam.write('1');
         while(countPic < 3) {
@@ -176,7 +210,7 @@ public class SimpleRead {
             for (int y = 0; y < HEIGHT; y++) {
                 for (int x = 0; x < WIDTH; x++) {
                     int temp = read(inputStreamCam);
-                    rgb[y][x] = ((temp&0xFF) << 16) | ((temp&0xFF) << 8) | (temp&0xFF);
+                    rgb[countPic][y][x] = ((temp&0xFF) << 16) | ((temp&0xFF) << 8) | (temp&0xFF);
                     data[y] += temp;
                 }
                 data[y] /= WIDTH;
@@ -184,7 +218,7 @@ public class SimpleRead {
 
             for (int y = 0; y < HEIGHT; y++) {
                 for (int x = 0; x < WIDTH; x++) {
-                    rgb2[x][y] = rgb[y][x];
+                    rgb2[countPic][x][y] = rgb[countPic][y][x];
                 }
             }
 
@@ -198,18 +232,17 @@ public class SimpleRead {
             System.out.println();
             System.out.println("Mean pixel: " + average);
 
-            valSend[countPic] = (char) average;
+            valSend[countPic] = (byte) average;
 
             BMP bmp = new BMP();
-            bmp.saveBMP("c:/out/" + (counter++) + "_" + average +".bmp", rgb2);
+            bmp.saveBMP("c:/out/" + (counter++) + "_" + average +"NN.bmp", rgb2[countPic]);
 
             System.out.println("Saved image: " + (counter-1));
             System.out.println();
             countPic++;
-
-            outputStreamCam.write('P');
         }
 
+        nowTurning = 2;
         outputStreamCam.write('E');
         TimeUnit.SECONDS.sleep(5);
         outputStreamTx.write('$');
